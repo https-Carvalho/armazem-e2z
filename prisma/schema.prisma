@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Proprietario {
+  E2Z
+  E_REDES
+}
+
+enum Unidade {
+  UN
+  M
+  ROLO
+}
+
+enum TipoMovimento {
+  ABERTURA
+  ENTRADA
+  SAIDA
+  AJUSTE_CONTAGEM
+  ANULACAO
+}
+
+enum Perfil {
+  ADMIN
+  GESTOR
+  OPERADOR
+  CONSULTA_EREDES
+}
+
+enum EstadoRequisicao {
+  RASCUNHO
+  PENDENTE
+  CONFIRMADA
+  RECEBIDA_PARCIAL
+  RECEBIDA_TOTAL
+  CANCELADA
+}
+
+enum EstadoLinha {
+  PENDENTE
+  RECEBIDA_PARCIAL
+  RECEBIDA_TOTAL
+}
+
+enum EstadoSessaoContagem {
+  ABERTA
+  CONCLUIDA
+}
+
+model Utilizador {
+  id                     Int              @id @default(autoincrement())
+  nome                   String
+  perfil                 Perfil
+  movimentos             Movimento[]      @relation("MovimentosCriados")
+  movimentos_autorizados Movimento[]      @relation("MovimentosAutorizados")
+  requisicoes            Requisicao[]
+  sessoes_contagem       SessaoContagem[]
+}
+
+model Localizacao {
+  id       Int       @id @default(autoincrement())
+  nome     String    @unique
+  produtos Produto[]
+}
+
+model Produto {
+  id                    Int           @id @default(autoincrement())
+  nome                  String
+  codigo_e2z            String?       @unique
+  codigo_edp            String?       @unique
+  capitulo              String?
+  artigo                String?
+  proprietario          Proprietario
+  unidade               Unidade
+  dimensao_tecnica      String?
+  stock_min             Decimal       @default(0)
+  stock_max             Decimal?
+  incremento_quantidade Decimal       @default(1)
+  ativo                 Boolean       @default(true)
+  versao                Int           @default(1)
+  localizacao_id        Int?
+  criado_em             DateTime      @default(now())
+
+  localizacao Localizacao?      @relation(fields: [localizacao_id], references: [id])
+  movimentos  Movimento[]
+  linhas_req  LinhaRequisicao[]
+  linhas_cont LinhaContagem[]
+
+  @@index([proprietario])
+  @@index([nome])
+}
+
+model Movimento {
+  id                   Int           @id @default(autoincrement())
+  produto_id           Int
+  tipo                 TipoMovimento
+  quantidade           Decimal
+  utilizador_id        Int
+  autorizado_por_id    Int?
+  obra_id              Int?
+  sessao_contagem_id   Int?
+  linha_requisicao_id  Int?
+  emergencia           Boolean       @default(false)
+  override_operacional Boolean       @default(false)
+  motivo               String?
+  notas                String?
+  criado_em            DateTime      @default(now())
+
+  produto          Produto          @relation(fields: [produto_id], references: [id])
+  utilizador       Utilizador       @relation("MovimentosCriados", fields: [utilizador_id], references: [id])
+  autorizado_por   Utilizador?      @relation("MovimentosAutorizados", fields: [autorizado_por_id], references: [id])
+  obra             Obra?            @relation(fields: [obra_id], references: [id])
+  sessao_contagem  SessaoContagem?  @relation(fields: [sessao_contagem_id], references: [id])
+  linha_requisicao LinhaRequisicao? @relation(fields: [linha_requisicao_id], references: [id])
+
+  @@index([produto_id, criado_em])
+  @@index([tipo, criado_em])
+  @@index([emergencia, criado_em])
+  @@index([override_operacional, criado_em])
+}
+
+model SessaoContagem {
+  id            Int                  @id @default(autoincrement())
+  estado        EstadoSessaoContagem @default(ABERTA)
+  criado_por_id Int
+  criado_em     DateTime             @default(now())
+  concluido_em  DateTime?
+
+  criado_por Utilizador      @relation(fields: [criado_por_id], references: [id])
+  linhas     LinhaContagem[]
+  movimentos Movimento[]
+}
+
+model LinhaContagem {
+  id                  Int      @id @default(autoincrement())
+  sessao_contagem_id  Int
+  produto_id          Int
+  quantidade_esperada Decimal
+  quantidade_contada  Decimal?
+  desvio              Decimal?
+  justificacao        String?
+
+  sessao  SessaoContagem @relation(fields: [sessao_contagem_id], references: [id])
+  produto Produto        @relation(fields: [produto_id], references: [id])
+}
+
+model Requisicao {
+  id            Int              @id @default(autoincrement())
+  estado        EstadoRequisicao @default(RASCUNHO)
+  criado_por_id Int
+  notas         String?
+  criado_em     DateTime         @default(now())
+  confirmado_em DateTime?
+
+  criado_por Utilizador        @relation(fields: [criado_por_id], references: [id])
+  linhas     LinhaRequisicao[]
+}
+
+model LinhaRequisicao {
+  id                  Int         @id @default(autoincrement())
+  requisicao_id       Int
+  produto_id          Int
+  quantidade_sugerida Decimal
+  quantidade_pedida   Decimal
+  quantidade_recebida Decimal     @default(0)
+  estado              EstadoLinha @default(PENDENTE)
+
+  requisicao Requisicao @relation(fields: [requisicao_id], references: [id])
+  produto    Produto    @relation(fields: [produto_id], references: [id])
+  movimentos Movimento[]
+}
+
+model Obra {
+  id         Int          @id @default(autoincrement())
+  nome       String
+  referencia String?
+  movimentos Movimento[]
+}
+
+model Configuracao {
+  id        Int      @id @default(autoincrement())
+  chave     String   @unique
+  valor     String
+  descricao String?
+  criado_em DateTime @default(now())
+}

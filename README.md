@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Armazem E2Z Demo
 
-## Getting Started
+Demo funcional de gestao de armazem para validar o PRD Demo E2Z.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Next.js 16 App Router
+- React 19
+- Prisma 7
+- PostgreSQL / Neon
+- Tailwind CSS v4
+
+## Configuracao
+
+Cria `.env` com:
+
+```env
+DATABASE_URL="postgresql://..."
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Comandos
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```powershell
+npm install
+npx prisma generate
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Migracao da demo
 
-## Learn More
+A migration nova esta em:
 
-To learn more about Next.js, take a look at the following resources:
+```text
+prisma/migrations/20260520020000_prd_demo_domain/migration.sql
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Como a base atual pode ser Neon/cloud e a alteracao remove campos antigos, o `migrate dev` pode pedir confirmacao interativa. Antes de aplicar numa base com dados reais, rever o SQL.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Para uma base de demo descartavel:
 
-## Deploy on Vercel
+```powershell
+npx prisma migrate deploy
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Reset / seed da demo
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+O seed apaga dados operacionais para repor o estado da demo. Se `DATABASE_URL` parecer cloud/shared, o seed bloqueia sem confirmacao explicita.
+
+```powershell
+$env:ALLOW_DEMO_RESET="true"
+npx prisma db seed
+```
+
+## Roteiro manual
+
+1. Abrir dashboard e confirmar stock critico E2Z/E-Redes.
+2. Pesquisar produtos no catalogo.
+3. Registar entrada e confirmar movimento no historico.
+4. Registar saida normal.
+5. Tentar saida sem stock como Operador e confirmar bloqueio.
+6. Trocar para Gestor/Admin e autorizar emergencia E-Redes com motivo.
+7. Autorizar override E2Z e confirmar que nao fica marcado como emergencia.
+8. Concluir contagem com desvio justificado.
+9. Gerar requisicao sugerida.
+10. Receber parcialmente uma linha e confirmar `RECEBIDA_PARCIAL`.
+11. Trocar para Consulta E-Redes e confirmar que nao aparecem materiais E2Z.
+
+## Simulado na demo
+
+- Seletor de utilizador/perfil.
+- Notificacoes externas.
+- Importacao completa do Excel.
+- Exportacao CSV/PDF.
+
+Stock, movimentos, permissoes de dados, contagens e requisicoes usam funcoes server-side e base de dados.
