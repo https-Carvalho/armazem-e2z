@@ -10,6 +10,7 @@ import { criarProduto, atualizarProduto, definirProdutoAtivo } from "@/lib/domai
 import {
   atualizarLinhaRequisicao,
   cancelarRequisicao,
+  confirmarRequisicao,
   criarRequisicaoManual,
   criarRequisicaoSugerida,
   receberLinhaRequisicao,
@@ -253,6 +254,22 @@ export async function receberLinhaRequisicaoAction(input: {
       data: { estadoLinha: result.estadoLinha, estadoRequisicao: result.estadoRequisicao },
       message: "Rececao registada.",
     };
+  } catch (error) {
+    return { ok: false, errors: toErrors(error) };
+  }
+}
+
+export async function confirmarRequisicaoAction(input: {
+  perfil: Perfil;
+  requisicaoId: number;
+}): Promise<ActionResult<{ requisicaoId: number }>> {
+  try {
+    const utilizadorId = await getUserIdByPerfil(input.perfil);
+    const result = await confirmarRequisicao(prisma, { utilizadorId, requisicaoId: input.requisicaoId });
+
+    if (!result.ok) return { ok: false, errors: result.errors };
+    revalidateDemo();
+    return { ok: true, data: { requisicaoId: result.requisicaoId }, message: "Requisicao confirmada." };
   } catch (error) {
     return { ok: false, errors: toErrors(error) };
   }

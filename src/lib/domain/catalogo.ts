@@ -108,6 +108,11 @@ export async function listarMovimentos(tx: Tx, perfil: Perfil): Promise<Moviment
 
 export async function listarRequisicoes(tx: Tx, perfil: Perfil): Promise<RequisicaoResumo[]> {
   const requisicoes = await tx.requisicao.findMany({
+    where: {
+      estado: perfil === "OPERADOR"
+        ? { in: ["CONFIRMADA", "RECEBIDA_PARCIAL"] }
+        : { not: "CANCELADA" },
+    },
     include: {
       criado_por: true,
       linhas: { include: { produto: true }, orderBy: { id: "asc" } },
@@ -151,7 +156,7 @@ export async function getDemoState(tx: Tx, perfil: Perfil): Promise<DemoState> {
     stockCriticoE2Z: produtosCriticos.filter((produto) => produto.proprietario === "E2Z").length,
     stockCriticoERedes: produtosCriticos.filter((produto) => produto.proprietario === "E_REDES").length,
     movimentosHoje: movimentos.filter((movimento) => movimento.criado_em.startsWith(hoje)).length,
-    requisicoesPendentes: requisicoes.filter((req) => req.estado === "PENDENTE" || req.estado === "CONFIRMADA").length,
+    requisicoesPendentes: requisicoes.filter((req) => req.estado === "PENDENTE").length,
     produtosCriticos,
     ultimosMovimentos: movimentos.slice(0, 8),
   };

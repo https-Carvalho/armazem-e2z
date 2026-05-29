@@ -33,6 +33,7 @@ export type Action =
   | "saida_override"
   | "aprovar_requisicao"
   | "criar_requisicao"
+  | "receber_requisicao"
   | "ver_so_eredes";
 
 const PERMISSIONS: Record<Perfil, Action[]> = {
@@ -40,15 +41,15 @@ const PERMISSIONS: Record<Perfil, Action[]> = {
     "ver_entradas", "ver_saidas", "ver_contagens",
     "ver_requisicoes", "ver_historico",
     "saida_emergencia", "saida_override",
-    "aprovar_requisicao", "criar_requisicao",
+    "aprovar_requisicao", "criar_requisicao", "receber_requisicao",
   ],
   GESTOR: [
     "ver_entradas", "ver_saidas", "ver_contagens",
     "ver_requisicoes", "ver_historico",
     "saida_emergencia", "saida_override",
-    "aprovar_requisicao", "criar_requisicao",
+    "aprovar_requisicao", "criar_requisicao", "receber_requisicao",
   ],
-  OPERADOR: ["ver_entradas", "ver_saidas", "ver_contagens"],
+  OPERADOR: ["ver_entradas", "ver_saidas", "ver_contagens", "ver_requisicoes", "receber_requisicao"],
   CONSULTA_EREDES: ["ver_so_eredes"],
 };
 

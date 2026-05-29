@@ -1,5 +1,5 @@
 import { Prisma, type PrismaClient, type Proprietario, type Unidade } from "@/generated/prisma/client";
-import { podeGerirRequisicoes } from "./permissoes";
+import { podeGerirCatalogo } from "./permissoes";
 import { decimal, validarQuantidade } from "./quantidades";
 
 export type ProdutoCrudInput = {
@@ -51,8 +51,8 @@ export async function criarProduto(db: PrismaClient, input: ProdutoCrudInput & {
   return db.$transaction(async (tx) => {
     const utilizador = await tx.utilizador.findUnique({ where: { id: input.utilizadorId } });
     if (!utilizador) return { ok: false as const, errors: ["Utilizador demo nao encontrado."] };
-    if (!podeGerirRequisicoes(utilizador.perfil)) {
-      return { ok: false as const, errors: ["Apenas Admin/Gestor pode criar produtos."] };
+    if (!podeGerirCatalogo(utilizador.perfil)) {
+      return { ok: false as const, errors: ["Apenas Admin pode criar produtos."] };
     }
 
     const validacao = validarProdutoInput(input);
@@ -102,8 +102,8 @@ export async function criarProduto(db: PrismaClient, input: ProdutoCrudInput & {
 export async function atualizarProduto(db: PrismaClient, input: ProdutoCrudInput & { utilizadorId: number; produtoId: number }) {
   const utilizador = await db.utilizador.findUnique({ where: { id: input.utilizadorId } });
   if (!utilizador) return { ok: false as const, errors: ["Utilizador demo nao encontrado."] };
-  if (!podeGerirRequisicoes(utilizador.perfil)) {
-    return { ok: false as const, errors: ["Apenas Admin/Gestor pode editar produtos."] };
+  if (!podeGerirCatalogo(utilizador.perfil)) {
+    return { ok: false as const, errors: ["Apenas Admin pode editar produtos."] };
   }
 
   const validacao = validarProdutoInput(input);
@@ -140,8 +140,8 @@ export async function definirProdutoAtivo(db: PrismaClient, input: {
 }) {
   const utilizador = await db.utilizador.findUnique({ where: { id: input.utilizadorId } });
   if (!utilizador) return { ok: false as const, errors: ["Utilizador demo nao encontrado."] };
-  if (!podeGerirRequisicoes(utilizador.perfil)) {
-    return { ok: false as const, errors: ["Apenas Admin/Gestor pode alterar o estado do produto."] };
+  if (!podeGerirCatalogo(utilizador.perfil)) {
+    return { ok: false as const, errors: ["Apenas Admin pode alterar o estado do produto."] };
   }
 
   const produto = await db.produto.findUnique({ where: { id: input.produtoId } });

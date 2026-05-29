@@ -9,10 +9,22 @@ export function podeAlterarStock(perfil: Perfil) {
   return perfil === "ADMIN" || perfil === "GESTOR" || perfil === "OPERADOR";
 }
 
+export function podeGerirCatalogo(perfil: Perfil) {
+  return perfil === "ADMIN";
+}
+
 export function podeAutorizarExcecao(perfil: Perfil) {
   return perfil === "ADMIN" || perfil === "GESTOR";
 }
 
+export function podeAnularMovimentos(perfil: Perfil) {
+  return perfil === "ADMIN";
+}
+
 export function podeGerirRequisicoes(perfil: Perfil) {
   return perfil === "ADMIN" || perfil === "GESTOR";
+}
+
+export function podeReceberRequisicoes(perfil: Perfil) {
+  return perfil === "ADMIN" || perfil === "GESTOR" || perfil === "OPERADOR";
 }

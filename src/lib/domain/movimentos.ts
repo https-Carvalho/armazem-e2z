@@ -1,5 +1,5 @@
 import { Prisma, type Perfil, type PrismaClient, type Proprietario, type TipoMovimento } from "@/generated/prisma/client";
-import { podeAlterarStock, podeAutorizarExcecao } from "./permissoes";
+import { podeAlterarStock, podeAnularMovimentos, podeAutorizarExcecao } from "./permissoes";
 import { getStockMap } from "./catalogo";
 import { decimal, validarQuantidade } from "./quantidades";
 
@@ -105,8 +105,8 @@ export async function anularMovimento(db: PrismaClient, input: {
   return db.$transaction(async (tx) => {
     const utilizador = await tx.utilizador.findUnique({ where: { id: input.utilizadorId } });
     if (!utilizador) return { ok: false as const, errors: ["Utilizador demo nao encontrado."] };
-    if (!podeAutorizarExcecao(utilizador.perfil)) {
-      return { ok: false as const, errors: ["Apenas Admin/Gestor pode anular movimentos nesta demo."] };
+    if (!podeAnularMovimentos(utilizador.perfil)) {
+      return { ok: false as const, errors: ["Apenas Admin pode anular movimentos nesta demo."] };
     }
     if (!input.motivo.trim()) return { ok: false as const, errors: ["O motivo da anulacao e obrigatorio."] };
 

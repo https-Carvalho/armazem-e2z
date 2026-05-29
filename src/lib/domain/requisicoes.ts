@@ -1,6 +1,6 @@
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { getStockMap } from "./catalogo";
-import { podeGerirRequisicoes } from "./permissoes";
+import { podeGerirRequisicoes, podeReceberRequisicoes } from "./permissoes";
 import { validarQuantidade } from "./quantidades";
 
 export async function criarRequisicaoSugerida(db: PrismaClient, input: { utilizadorId: number }) {
@@ -26,9 +26,8 @@ export async function criarRequisicaoSugerida(db: PrismaClient, input: { utiliza
     const requisicao = await tx.requisicao.create({
       data: {
         criado_por_id: utilizador.id,
-        estado: "CONFIRMADA",
+        estado: "PENDENTE",
         notas: "Requisicao sugerida automaticamente pela demo",
-        confirmado_em: new Date(),
         linhas: {
           create: linhas.map(({ produto, sugerida }) => ({
             produto_id: produto.id,
@@ -92,9 +91,8 @@ export async function criarRequisicaoManual(db: PrismaClient, input: {
     const requisicao = await tx.requisicao.create({
       data: {
         criado_por_id: utilizador.id,
-        estado: "CONFIRMADA",
+        estado: "PENDENTE",
         notas: input.notas?.trim() || "Requisicao manual criada na demo",
-        confirmado_em: new Date(),
         linhas: {
           create: linhasValidadas.map(({ produto, quantidade }) => ({
             produto_id: produto.id,
@@ -117,8 +115,8 @@ export async function receberLinhaRequisicao(db: PrismaClient, input: {
   return db.$transaction(async (tx) => {
     const utilizador = await tx.utilizador.findUnique({ where: { id: input.utilizadorId } });
     if (!utilizador) return { ok: false as const, errors: ["Utilizador demo nao encontrado."] };
-    if (!podeGerirRequisicoes(utilizador.perfil)) {
-      return { ok: false as const, errors: ["Apenas Admin/Gestor pode receber requisicoes."] };
+    if (!podeReceberRequisicoes(utilizador.perfil)) {
+      return { ok: false as const, errors: ["Apenas Admin/Gestor/Operador pode receber requisicoes."] };
     }
 
     const linha = await tx.linhaRequisicao.findUnique({
@@ -128,6 +126,9 @@ export async function receberLinhaRequisicao(db: PrismaClient, input: {
     if (!linha) return { ok: false as const, errors: ["Linha de requisicao nao encontrada."] };
     if (linha.requisicao.estado === "CANCELADA") {
       return { ok: false as const, errors: ["Nao e possivel receber uma requisicao cancelada."] };
+    }
+    if (linha.requisicao.estado === "PENDENTE" || linha.requisicao.estado === "RASCUNHO") {
+      return { ok: false as const, errors: ["Confirma a requisicao antes de receber material."] };
     }
     if (linha.estado === "RECEBIDA_TOTAL") {
       return { ok: false as const, errors: ["Esta linha ja foi recebida na totalidade."] };
@@ -174,6 +175,37 @@ export async function receberLinhaRequisicao(db: PrismaClient, input: {
 
     return { ok: true as const, estadoLinha: estado, estadoRequisicao: novoEstadoReq };
   }, { isolationLevel: "Serializable" });
+}
+
+export async function confirmarRequisicao(db: PrismaClient, input: {
+  utilizadorId: number;
+  requisicaoId: number;
+}) {
+  return db.$transaction(async (tx) => {
+    const utilizador = await tx.utilizador.findUnique({ where: { id: input.utilizadorId } });
+    if (!utilizador) return { ok: false as const, errors: ["Utilizador demo nao encontrado."] };
+    if (!podeGerirRequisicoes(utilizador.perfil)) {
+      return { ok: false as const, errors: ["Apenas Admin/Gestor pode confirmar requisicoes."] };
+    }
+
+    const requisicao = await tx.requisicao.findUnique({
+      where: { id: input.requisicaoId },
+      include: { linhas: true },
+    });
+    if (!requisicao) return { ok: false as const, errors: ["Requisicao nao encontrada."] };
+    if (requisicao.estado === "CANCELADA") return { ok: false as const, errors: ["Nao e possivel confirmar uma requisicao cancelada."] };
+    if (requisicao.estado !== "PENDENTE" && requisicao.estado !== "RASCUNHO") {
+      return { ok: false as const, errors: ["Esta requisicao ja foi confirmada ou recebida."] };
+    }
+    if (!requisicao.linhas.length) return { ok: false as const, errors: ["A requisicao precisa de pelo menos uma linha."] };
+
+    await tx.requisicao.update({
+      where: { id: requisicao.id },
+      data: { estado: "CONFIRMADA", confirmado_em: new Date() },
+    });
+
+    return { ok: true as const, requisicaoId: requisicao.id };
+  });
 }
 
 export async function atualizarLinhaRequisicao(db: PrismaClient, input: {
